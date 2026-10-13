@@ -1,0 +1,477 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="タイの源泉徴収証明書（50 ทวิ）を日本語で作成できる無料ツール">
+<title>源泉税アシスタント</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Sans+Thai:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&family=Sarabun:wght@400&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0}
+/* Layout: two-pane working tool — input on the left, result + Thai certificate preview on the right */
+:root{
+  --bg:#eceff3; --surface:#ffffff; --ink:#1b2130; --muted:#5a6375; --line:#d3d9e2;
+  --accent:#2c4a8c; --accent-soft:#e3e9f6; --warn:#9a5b00; --warn-soft:#fbf0dc; --ok:#1f6b4a;
+  --f-jp:"Noto Sans JP","Hiragino Sans","Yu Gothic",sans-serif;
+  --f-th:"Noto Sans Thai","Leelawadee UI",Tahoma,sans-serif;
+  --f-num:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#12161f; --surface:#1a202c; --ink:#e6e9ef; --muted:#9aa3b5; --line:#2e3646;
+  --accent:#8fa9e8; --accent-soft:#232d44; --warn:#e9b25a; --warn-soft:#3a2d16; --ok:#6fcf9f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12161f; --surface:#1a202c; --ink:#e6e9ef; --muted:#9aa3b5; --line:#2e3646;
+  --accent:#8fa9e8; --accent-soft:#232d44; --warn:#e9b25a; --warn-soft:#3a2d16; --ok:#6fcf9f; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-jp);font-size:15px;line-height:1.6}
+.wrap{max-width:1180px;margin:0 auto;padding:28px 16px 48px;display:grid;gap:24px}
+header h1{font-size:1.6rem;margin:0;text-wrap:balance;letter-spacing:.02em}
+header p{margin:4px 0 0;color:var(--muted);max-width:68ch}
+.badge{display:inline-block;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);padding:2px 8px;border-radius:3px;margin-bottom:8px}
+.grid{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:20px;display:grid;gap:16px;min-width:0}
+.panel h2{font-size:1rem;margin:0;display:flex;gap:8px;align-items:baseline}
+.panel h2 small{font-weight:400;color:var(--muted);font-family:var(--f-th);font-size:.82rem}
+label{display:grid;gap:4px;font-size:.86rem;font-weight:500}
+label .th{font-family:var(--f-th);color:var(--muted);font-weight:400;font-size:.78rem}
+select{font-family:var(--f-jp),var(--f-th)}
+input,select{font:inherit;font-size:.95rem;padding:8px 10px;border:1px solid var(--line);border-radius:4px;background:var(--surface);color:var(--ink);width:100%;box-sizing:border-box}
+input:focus,select:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg input{position:absolute;opacity:0;width:1px;height:1px}
+.seg label{display:block;text-align:center;padding:8px 4px;cursor:pointer;font-size:.82rem;border-left:1px solid var(--line);line-height:1.3}
+.seg label:first-of-type{border-left:0}
+.seg input:checked+label{background:var(--accent);color:var(--surface)}
+.seg input:focus-visible+label{outline:2px solid var(--accent);outline-offset:-3px}
+.check{display:flex;gap:8px;align-items:flex-start;font-weight:400}
+.check input{width:auto;margin-top:5px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+fieldset{border:0;padding:0;margin:0;display:grid;gap:6px}
+legend{font-size:.86rem;font-weight:500;padding:0;margin-bottom:4px}
+/* result */
+.summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:4px;overflow:hidden}
+@media (max-width:560px){.summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.summary div{background:var(--surface);padding:12px}
+.summary dt{font-size:.74rem;color:var(--muted);letter-spacing:.04em}
+.summary dd{margin:2px 0 0;font-family:var(--f-num);font-size:1.15rem;font-variant-numeric:tabular-nums;font-weight:500}
+.summary .key dd{color:var(--accent)}
+.explain{display:grid;gap:8px;font-size:.92rem}
+.explain p{margin:0}
+.notes{display:grid;gap:8px}
+.note{padding:10px 12px;border-radius:4px;font-size:.86rem;background:var(--accent-soft)}
+.note.warn{background:var(--warn-soft);color:var(--warn)}
+.note b{font-weight:700}
+/* certificate */
+.cert{font-family:var(--f-th);font-size:.8rem;line-height:1.45;border:1.5px solid var(--ink);padding:14px;display:grid;gap:10px;color:var(--ink);background:var(--surface)}
+.cert-head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start}
+.cert-head strong{font-size:1rem}
+.cert-box{border:1px solid var(--muted);padding:8px;display:grid;gap:2px}
+.cert-box .lbl{color:var(--muted);font-size:.74rem}
+.mono{font-family:var(--f-num);font-variant-numeric:tabular-nums;letter-spacing:.06em}
+.boxes{display:flex;gap:14px;flex-wrap:wrap}
+.tick{display:inline-flex;gap:4px;align-items:center}
+.tick i{display:inline-grid;place-items:center;width:13px;height:13px;border:1px solid var(--ink);font-style:normal;font-size:.7rem;line-height:1}
+.tbl-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:520px}
+th,td{border:1px solid var(--muted);padding:5px 6px;vertical-align:top}
+th{font-weight:500;background:var(--accent-soft);font-size:.74rem}
+td.num{text-align:right;font-family:var(--f-num);font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.on td{background:var(--accent-soft);font-weight:500}
+.words{border:1px solid var(--muted);padding:6px 8px}
+.jp-gloss{font-family:var(--f-jp);color:var(--muted);font-size:.72rem}
+.na{padding:18px;border:1px dashed var(--line);border-radius:4px;color:var(--muted);font-size:.9rem}
+.pill{display:inline-block;font-size:.72rem;padding:1px 7px;border-radius:999px;border:1px solid var(--accent);color:var(--accent);font-family:var(--f-num)}
+.ex{font-size:.7rem;color:var(--muted);border:1px solid var(--line);border-radius:3px;padding:0 5px;margin-left:6px}
+.actions{display:flex;gap:10px;flex-wrap:wrap}
+button{font:inherit;font-size:.9rem;padding:9px 16px;border-radius:4px;border:1px solid var(--accent);background:var(--accent);color:var(--surface);cursor:pointer}
+button.ghost{background:transparent;color:var(--accent)}
+.del{border:0;background:transparent;color:var(--muted);padding:2px 6px;font-size:1rem}
+.items{display:grid;gap:8px}
+.item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 8px;padding:10px;border:1px solid var(--line);border-radius:4px;background:var(--bg)}
+.item select{grid-column:1/-1}
+.item .amt-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;grid-column:1/-1}
+.item .vatchk{display:flex;gap:4px;align-items:center;font-size:.8rem;font-weight:400;white-space:nowrap}
+.item .vatchk input{width:auto}
+.item-head{display:flex;justify-content:space-between;align-items:center;grid-column:1/-1;font-size:.76rem;color:var(--muted)}
+button.add{justify-self:start;padding:6px 12px;font-size:.85rem}
+.hint{margin:0;font-size:.78rem;color:var(--muted)}
+.brk table{min-width:480px;font-size:.86rem}
+.brk th,.brk td{border:0;border-bottom:1px solid var(--line);padding:7px 8px;text-align:left;background:transparent}
+.brk th{color:var(--muted);font-weight:500;font-size:.76rem}
+.brk td.num,.brk th.num{text-align:right}
+.brk tfoot td{font-weight:700;border-bottom:0}
+.zero{color:var(--ok);font-weight:500}
+.party{display:grid;gap:10px;padding:12px;border:1px solid var(--line);border-radius:4px}
+.party legend{padding:0 6px;font-weight:700;display:flex;flex-wrap:wrap;gap:0 6px;align-items:baseline}
+.lockbar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;font-size:.8rem;color:var(--muted)}
+button.small{padding:4px 12px;font-size:.82rem}
+input[readonly]{background:var(--bg);border-color:transparent;color:var(--ink);cursor:default}
+.party.editing{border-color:var(--accent)}
+.segth{font-family:var(--f-th);font-size:.72rem;opacity:.85}
+.dlbar{display:grid;gap:6px}
+.dlbar button{justify-self:start}
+button:disabled{opacity:.45;cursor:not-allowed}
+.party legend .th2{white-space:nowrap}
+.th2{font-family:var(--f-th);color:var(--muted);font-weight:400;font-size:.78rem}
+.foot{color:var(--muted);font-size:.8rem;max-width:80ch}
+@media (prefers-reduced-motion:no-preference){.summary dd{transition:color .2s}}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="badge">IS 試作 · Beta</span>
+    <h1>源泉税アシスタント <span style="font-family:var(--f-th);font-weight:500;font-size:1rem;color:var(--muted)">ระบบช่วยออกหนังสือรับรองการหักภาษี ณ ที่จ่าย</span></h1>
+    <p>請求書の明細を日本語で入力すると、明細ごとに源泉税率を判定し、申告様式・期限とあわせてタイ語の源泉徴収証明書（50 ทวิ）の下書きを作成します。</p>
+  </header>
+
+  <div class="grid">
+    <form class="panel" id="f" autocomplete="off">
+      <h2>支払い内容の入力 <small>ข้อมูลการจ่ายเงิน</small></h2>
+
+      <fieldset class="party">
+        <legend>源泉徴収義務者（支払者） <span class="th2">ผู้มีหน้าที่หักภาษี ณ ที่จ่าย</span></legend>
+        <div class="lockbar"><span id="lockMsg">登録済みの情報を使用中 <span class="th2">ใช้ข้อมูลที่บันทึกไว้</span></span><button type="button" class="ghost small" id="editPayer">編集 <span style="font-family:var(--f-th)">แก้ไข</span></button></div>
+        <label for="payerName">会社名 <span class="th">ชื่อผู้จ่ายเงิน</span><input id="payerName" readonly value="บริษัท ซากุระ เทรดดิ้ง (ประเทศไทย) จำกัด"></label>
+        <label for="payerTin">納税者番号（13桁） <span class="th">เลขประจำตัวผู้เสียภาษี</span><input id="payerTin" readonly inputmode="numeric" maxlength="13" value="0105560000000"></label>
+        <label for="payerAddr">住所 <span class="th">ที่อยู่</span><input id="payerAddr" readonly value="999/9 อาคารสาทรทาวเวอร์ ชั้น 20 ถนนสาทรใต้ แขวงทุ่งมหาเมฆ เขตสาทร กรุงเทพมหานคร 10120"></label>
+      </fieldset>
+
+      <fieldset class="party">
+        <legend>受領者（支払先） <span class="th2">ผู้ถูกหักภาษี ณ ที่จ่าย</span></legend>
+        <div class="seg" role="radiogroup" aria-label="支払先の種類">
+          <input type="radio" name="payee" id="p-ind" value="ind"><label for="p-ind">タイの個人<br><span class="segth">บุคคลธรรมดา</span></label>
+          <input type="radio" name="payee" id="p-co" value="co" checked><label for="p-co">タイの法人<br><span class="segth">นิติบุคคลในไทย</span></label>
+          <input type="radio" name="payee" id="p-fo" value="fo"><label for="p-fo">海外の法人<br><span class="segth">นิติบุคคลต่างประเทศ</span></label>
+        </div>
+        <p class="hint">お金を受け取る相手は誰か。これで申告書の種類が決まります：タイの個人 → <span style="font-family:var(--f-th)">ภ.ง.ด.3</span>、タイの法人 → <span style="font-family:var(--f-th)">ภ.ง.ด.53</span>、海外の法人 → <span style="font-family:var(--f-th)">ภ.ง.ด.54</span></p>
+        <label for="payeeName">名称 <span class="th">ชื่อผู้รับเงิน</span><input id="payeeName" value="บริษัท บางนา พร็อพเพอร์ตี้ จำกัด"></label>
+        <label for="payeeTin">納税者番号（13桁） <span class="th">เลขประจำตัวผู้เสียภาษี</span><input id="payeeTin" inputmode="numeric" maxlength="13" value="0105561000000"></label>
+        <label for="payeeAddr">住所 <span class="th">ที่อยู่</span><input id="payeeAddr" value="88 ถนนบางนา-ตราด แขวงบางนาใต้ เขตบางนา กรุงเทพมหานคร 10260"></label>
+      </fieldset>
+
+      <fieldset>
+        <legend>請求書の明細 <span class="th2">รายการในใบแจ้งหนี้</span></legend>
+        <div class="items" id="items"></div>
+        <button type="button" class="ghost add" id="addItem">＋ 明細を追加 <span style="font-family:var(--f-th)">เพิ่มรายการ</span></button>
+        <p class="hint">金額はVAT抜きで入力。1枚の請求書に賃料とサービス料などが含まれる場合は、明細ごとに分けて入力します。<br>電気・水道料（使用量に応じた請求）は源泉徴収の対象外なので入力不要です。<span style="font-family:var(--f-th)">ค่าไฟ/ค่าน้ำตามมิเตอร์ไม่ต้องกรอก</span>（共用部の電気代など定額の請求は「サービス料」で入力）</p>
+      </fieldset>
+
+      <label for="date">支払日 <span class="th">วันที่จ่าย</span>
+        <input id="date" type="date" value="2026-10-10">
+      </label>
+
+      <div style="display:grid;gap:8px">
+        <label class="check" for="recur"><input type="checkbox" id="recur"> 継続契約（毎月の支払い等）</label>
+        <label class="check" for="ewht"><input type="checkbox" id="ewht"> e-Withholding Tax（銀行の電子源泉システム）で支払う</label>
+      </div>
+
+    </form>
+
+    <div style="display:grid;gap:24px;min-width:0">
+      <section class="panel" aria-live="polite">
+        <h2>判定結果 <small>ผลการคำนวณ</small></h2>
+        <dl class="summary" id="sum"></dl>
+        <div class="tbl-wrap brk" id="brk"></div>
+        <div class="explain" id="explain"></div>
+        <div class="notes" id="notes"></div>
+      </section>
+
+      <section class="panel">
+        <h2>源泉徴収証明書の下書き <small>หนังสือรับรองการหักภาษี ณ ที่จ่าย (50 ทวิ)</small></h2>
+        <div class="dlbar" id="dlbar" hidden>
+          <button type="button" id="dlBtn">PDFをダウンロード <span style="font-family:var(--f-th)">ดาวน์โหลด PDF (แบบกรมสรรพากร)</span></button>
+          <span class="hint" id="dlMsg">歳入局の公式様式に記入したPDFを作成します。入力内容はこのブラウザ内だけで処理され、外部に送信されません。</span>
+        </div>
+        <div id="cert"></div>
+      </section>
+    </div>
+  </div>
+
+
+  <p class="foot">税率は2026年10月時点の一般的なルールに基づく試作です（e-Withholding Tax 1%軽減は2026年1月1日〜2027年12月31日）。海外送金・租税条約の適用、祝日による期限の変更などは対象外または簡略化しています。実際の申告前に必ず会計担当者・税理士に確認してください。表示中の会社名・番号はすべて架空の例です。</p>
+</div>
+
+<script>
+const TYPES = {
+  rent:     {ja:"賃料（事務所・倉庫・車両等）", th:"ค่าเช่า", sec:"40(5)", row:5, rate:{ind:5,co:5,fo:15}, vat:false},
+  service:  {ja:"サービス料・管理費（共用部の清掃・警備等）", th:"ค่าบริการ", sec:"40(8)", row:5, rate:{ind:3,co:3,fo:15}, vat:true},
+  hire:     {ja:"業務委託・修理・工事", th:"ค่าจ้างทำของ", sec:"40(7)(8)", row:5, rate:{ind:3,co:3,fo:15}, vat:true},
+  prof:     {ja:"専門職報酬（弁護士・会計士・医師等）", th:"ค่าวิชาชีพอิสระ", sec:"40(6)", row:5, rate:{ind:3,co:3,fo:15}, vat:true},
+  ad:       {ja:"広告料", th:"ค่าโฆษณา", sec:"40(8)", row:5, rate:{ind:2,co:2,fo:null}, vat:true},
+  transport:{ja:"運送料（公共交通機関を除く）", th:"ค่าขนส่ง", sec:"40(8)", row:5, rate:{ind:1,co:1,fo:null}, vat:true},
+  commission:{ja:"仲介手数料・コミッション", th:"ค่านายหน้า / ค่าธรรมเนียม", sec:"40(2)", row:2, rate:{ind:null,co:3,fo:15}, vat:true},
+  royalty:  {ja:"ロイヤルティ・ソフトウェア使用料", th:"ค่าแห่งลิขสิทธิ์", sec:"40(3)", row:3, rate:{ind:null,co:3,fo:15}, vat:true},
+  interest: {ja:"利息（借入金等）", th:"ดอกเบี้ย", sec:"40(4)(ก)", row:4, rate:{ind:15,co:1,fo:15}, vat:false},
+  insurance:{ja:"損害保険料", th:"ค่าเบี้ยประกันวินาศภัย", sec:"40(8)", row:5, rate:{ind:null,co:1,fo:null}, vat:true},
+  promo:    {ja:"販売促進の報奨・リベート", th:"รางวัล ส่วนลด เนื่องจากการส่งเสริมการขาย", sec:"40(8)", row:5, rate:{ind:3,co:3,fo:null}, vat:false},
+  prize:    {ja:"懸賞・コンテストの賞金", th:"รางวัลจากการประกวด การแข่งขัน การชิงโชค", sec:"40(8)", row:5, rate:{ind:5,co:5,fo:null}, vat:false},
+  performer:{ja:"出演料（俳優・歌手・スポーツ選手等）", th:"ค่าจ้างนักแสดงสาธารณะ", sec:"40(8)", row:5, rate:{ind:5,co:null,fo:null}, vat:false},
+};
+const FORM = {ind:"ภ.ง.ด.3", co:"ภ.ง.ด.53", fo:"ภ.ง.ด.54"};
+const FORM_JA = {ind:"PND.3（個人向け）", co:"PND.53（法人向け）", fo:"PND.54（海外送金）"};
+const ROWS = [
+  [1,"เงินเดือน ค่าจ้าง เบี้ยเลี้ยง โบนัส ฯลฯ ตามมาตรา 40 (1)","給与・賞与"],
+  [2,"ค่าธรรมเนียม ค่านายหน้า ฯลฯ ตามมาตรา 40 (2)","手数料・仲介料"],
+  [3,"ค่าแห่งลิขสิทธิ์ ฯลฯ ตามมาตรา 40 (3)","使用料"],
+  [4,"ดอกเบี้ย ฯลฯ ตามมาตรา 40 (4) (ก)","利息"],
+  [5,"การจ่ายเงินได้ที่ต้องหักภาษี ณ ที่จ่าย ตามคำสั่งกรมสรรพากรที่ออกตามมาตรา 3 เตรส","賃料・サービス料・広告料・運送料など"],
+  [6,"อื่น ๆ (ระบุ)","その他"],
+];
+const $ = id => document.getElementById(id);
+const fmt = n => n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const r2 = x => Math.round(x*100)/100;
+
+// ---- Thai baht text ----
+const D=["ศูนย์","หนึ่ง","สอง","สาม","สี่","ห้า","หก","เจ็ด","แปด","เก้า"], P=["","สิบ","ร้อย","พัน","หมื่น","แสน"];
+function readGroup(n){
+  const s=String(n); let out="";
+  for(let i=0;i<s.length;i++){
+    const d=+s[i], p=s.length-1-i; if(!d) continue;
+    if(p===1&&d===1) out+="สิบ";
+    else if(p===1&&d===2) out+="ยี่สิบ";
+    else if(p===0&&d===1&&s.length>1) out+="เอ็ด";
+    else out+=D[d]+P[p];
+  }
+  return out;
+}
+function readInt(n){ if(n===0) return "ศูนย์"; if(n<1e6) return readGroup(n);
+  const hi=Math.floor(n/1e6), lo=n%1e6; return readInt(hi)+"ล้าน"+(lo?readGroup(lo):""); }
+function bahtText(x){ const t=Math.round(x*100), b=Math.floor(t/100), s=t%100; return readInt(b)+"บาท"+(s?readGroup(s)+"สตางค์":"ถ้วน"); }
+
+// ---- rule engine (pure): one invoice, many lines ----
+function judge(i){
+  const notes=[], lines=[];
+  let unsupported=false;
+  for(const it of i.items){
+    const t=TYPES[it.type]; let rate=t.rate[i.payee];
+    if(rate==null){ unsupported=true; lines.push({...it,t,rate:null,wht:0,vat:0}); continue; }
+    let e=false;
+    if(i.ewht && i.payee!=="fo" && rate>1){ rate=1; e=true; }
+    const vat = it.vat && i.payee!=="fo" ? r2(it.amt*0.07) : 0;
+    lines.push({...it,t,rate,e,vat,wht:0});
+  }
+  const whtBase = lines.filter(l=>l.rate>0).reduce((s,l)=>s+l.amt,0);
+  const small = i.payee!=="fo" && whtBase<1000 && !i.recur;
+  for(const l of lines) if(l.rate>0 && !small) l.wht=r2(l.amt*l.rate/100);
+  const total = lines.reduce((s,l)=>s+l.amt,0);
+  const vat = r2(lines.reduce((s,l)=>s+l.vat,0));
+  const wht = r2(lines.reduce((s,l)=>s+l.wht,0));
+  const net = r2(total+vat-wht);
+  const eApplied = lines.some(l=>l.e);
+  const d=new Date(i.date+"T00:00:00"); const y=d.getFullYear(), m=d.getMonth();
+  const due=new Date(y,m+1,7), edue=new Date(y,m+1,15);
+
+  for(const l of lines.filter(l=>l.rate==null)){
+    const why = i.payee==="ind" && (l.type==="commission"||l.type==="royalty")
+      ? "個人への手数料・ロイヤルティは給与と同じく累進税率で源泉するため、この試作では計算していません。"
+      : i.payee==="fo" ? "海外法人へのこの種類の支払いは、租税条約や恒久的施設（PE）の有無で扱いが変わります。専門家に確認してください。"
+      : "この支払先の種類では通常発生しない組み合わせです。支払先の種類を確認してください。";
+    notes.push(["warn",`「${l.t.ja.split("（")[0]}」：${why}`]);
+  }
+  if(lines.some(l=>l.type==="rent" && l.vat)) notes.push(["warn","不動産の賃料は通常VAT非課税です。請求書にVATが記載されているか確認してください（車両・機械のリースはVAT課税）。"]);
+  if(lines.filter(l=>l.rate>0).length>1) notes.push(["","税率の異なる明細は、証明書では同じ欄（第5項）に合算して記載します。月次申告書（PND）では明細ごとに税率を分けて記載します。"]);
+  if(small) notes.push(["","源泉対象の金額が1,000バーツ未満の単発の支払いのため、原則として源泉徴収は不要です（継続契約の場合は必要）。"]);
+  if(eApplied) notes.push(["","e-Withholding Tax利用のため 2%〜5% の税率を1%に軽減しています（2027年12月31日まで）。銀行が申告を代行するため、月次申告と証明書の作成は不要です。"]);
+  if(i.payee==="fo"){
+    notes.push(["warn","日タイ租税条約により、タイに恒久的施設（PE）がない日本法人へのサービス料は免税となる場合があります。居住者証明書の取得と専門家の確認が必要です。"]);
+    notes.push(["warn","海外への役務提供の支払いには、別途 PP.36（VATのリバースチャージ 7%）の申告も必要です。"]);
+  }
+  return {lines,total,whtBase,vat,wht,net,due,edue,eApplied,small,unsupported,notes};
+}
+
+function jDate(d){return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`}
+function thDate(d){const M=["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];return `${d.getDate()} ${M[d.getMonth()]} ${d.getFullYear()+543}`}
+const tin = s => (s||"").replace(/\D/g,"").replace(/^(\d)(\d{4})(\d{5})(\d{2})(\d)$/,"$1 $2 $3 $4 $5");
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+
+// ---- item editor ----
+let items=[ {type:"rent",amt:30000,vat:false}, {type:"service",amt:10000,vat:true} ]; // 例
+const typeOptions = sel => Object.entries(TYPES).map(([k,t])=>`<option value="${k}"${k===sel?" selected":""}>${t.ja}｜${t.th}</option>`).join("");
+function renderItems(){
+  $("items").innerHTML = items.map((it,k)=>`
+    <div class="item" data-k="${k}">
+      <div class="item-head"><span>明細 ${k+1}</span>${items.length>1?`<button type="button" class="del" data-del="${k}" aria-label="明細${k+1}を削除">×</button>`:""}</div>
+      <select id="it-type-${k}" data-f="type" aria-label="明細${k+1}の種類">${typeOptions(it.type)}</select>
+      <div class="amt-row">
+        <input id="it-amt-${k}" data-f="amt" type="number" min="0" step="0.01" value="${it.amt}" aria-label="明細${k+1}の金額（VAT抜き）">
+        <label class="vatchk" for="it-vat-${k}"><input id="it-vat-${k}" data-f="vat" type="checkbox"${it.vat?" checked":""}> VAT 7%</label>
+      </div>
+    </div>`).join("");
+}
+$("items").addEventListener("input",e=>{
+  const box=e.target.closest(".item"); if(!box) return; const k=+box.dataset.k, f=e.target.dataset.f;
+  if(f==="amt") items[k].amt=Math.max(0,parseFloat(e.target.value)||0);
+  if(f==="vat") items[k].vat=e.target.checked;
+  if(f==="type"){ items[k].type=e.target.value; items[k].vat=TYPES[e.target.value].vat; $(`it-vat-${k}`).checked=items[k].vat; }
+  render();
+});
+$("items").addEventListener("click",e=>{const b=e.target.closest("[data-del]"); if(b){items.splice(+b.dataset.del,1); renderItems(); render();}});
+$("addItem").addEventListener("click",()=>{items.push({type:"service",amt:0,vat:true}); renderItems(); render(); $(`it-amt-${items.length-1}`).focus();});
+
+function input(){
+  return {payee:document.querySelector("input[name=payee]:checked").value, items:items.map(x=>({...x})),
+    date:$("date").value||"2026-10-10", recur:$("recur").checked, ewht:$("ewht").checked,
+    payeeName:$("payeeName").value, payeeTin:$("payeeTin").value, payerName:$("payerName").value, payerTin:$("payerTin").value, payerAddr:$("payerAddr").value, payeeAddr:$("payeeAddr").value};
+}
+
+function render(){
+  const i=input(), r=judge(i);
+  $("notes").innerHTML=r.notes.map(([k,t])=>`<div class="note ${k}">${t}</div>`).join("");
+  $("sum").innerHTML=`
+    <div class="key"><dt>源泉税額</dt><dd>${fmt(r.wht)}</dd></div>
+    <div><dt>源泉対象額</dt><dd>${fmt(r.small?0:r.whtBase)}</dd></div>
+    <div><dt>VAT</dt><dd>${fmt(r.vat)}</dd></div>
+    <div><dt>支払額（明細分）</dt><dd>${fmt(r.net)}</dd></div>`;
+  $("brk").innerHTML=`<table>
+    <thead><tr><th>明細</th><th class="num">金額（VAT抜き）</th><th class="num">VAT</th><th class="num">税率</th><th class="num">源泉税</th></tr></thead>
+    <tbody>${r.lines.map(l=>`<tr><td>${l.t.ja.split("（")[0]}<div style="font-family:var(--f-th);color:var(--muted);font-size:.76rem">${l.t.th}${l.t.sec!=="—"?` · มาตรา ${l.t.sec}`:""}</div></td>
+      <td class="num mono">${fmt(l.amt)}</td><td class="num mono">${fmt(l.vat)}</td>
+      <td class="num mono">${l.rate==null?"対象外":l.rate===0?'<span class="zero">不要</span>':(r.small?"—":l.rate+"%")}</td>
+      <td class="num mono">${fmt(l.wht)}</td></tr>`).join("")}</tbody>
+    <tfoot><tr><td>合計</td><td class="num mono">${fmt(r.total)}</td><td class="num mono">${fmt(r.vat)}</td><td></td><td class="num mono">${fmt(r.wht)}</td></tr></tfoot>
+  </table>`;
+  const noFiling = r.eApplied || r.small || r.wht===0;
+  const form = r.eApplied ? "e-Withholding Tax（銀行経由）" : FORM_JA[i.payee];
+  $("explain").innerHTML = noFiling ? "" : `<p>申告様式：<b>${form}</b>　/　提出期限：<b>${jDate(r.due)}</b>（紙）・<b>${jDate(r.edue)}</b>（電子申告）</p>`;
+
+  // certificate
+  current = (r.wht>0 && !r.eApplied && i.payee!=="fo" && !r.unsupported) ? {i,r} : null;
+  if($("dlBtn")) $("dlBtn").disabled=!current;
+  if(r.wht===0 || r.eApplied){
+    $("cert").innerHTML=`<div class="na">${r.eApplied?"e-Withholding Taxでは銀行が電子的に証明を行うため、紙の証明書は不要です。":"源泉徴収が発生しないため、証明書は作成しません。"}</div>`; return;
+  }
+  if(i.payee==="fo"){
+    $("cert").innerHTML=`<div class="na">海外法人への支払い（PND.54）は 50 ทวิ ではなく、PND.54 の控えと納付書を送付先に渡すのが一般的です。日本で外国税額控除を受けるための書類は会計担当者に確認してください。</div>`; return;
+  }
+  const d=new Date(i.date+"T00:00:00");
+  const byRow={}; r.lines.filter(l=>l.wht>0).forEach(l=>{const k=l.t.row; byRow[k]=byRow[k]||{amt:0,wht:0,names:[]}; byRow[k].amt+=l.amt; byRow[k].wht+=l.wht; if(!byRow[k].names.includes(l.t.th)) byRow[k].names.push(l.t.th);});
+  const certBase = Object.values(byRow).reduce((s,x)=>s+x.amt,0);
+  $("cert").innerHTML=`
+  <div class="cert">
+    <div class="cert-head">
+      <div><strong>หนังสือรับรองการหักภาษี ณ ที่จ่าย</strong><div>ตามมาตรา 50 ทวิ แห่งประมวลรัษฎากร</div><div class="jp-gloss">源泉徴収証明書（歳入法第50条の2）</div></div>
+      <div>เล่มที่ ……… เลขที่ ………</div>
+    </div>
+    <div class="cert-box"><span class="lbl">ผู้มีหน้าที่หักภาษี ณ ที่จ่าย <span class="jp-gloss">支払者</span></span>
+      <div>${esc(i.payerName)}</div><div>ที่อยู่ ${esc(i.payerAddr)}</div><div>เลขประจำตัวผู้เสียภาษีอากร <span class="mono">${tin(i.payerTin)}</span></div></div>
+    <div class="cert-box"><span class="lbl">ผู้ถูกหักภาษี ณ ที่จ่าย <span class="jp-gloss">支払先</span></span>
+      <div>${esc(i.payeeName)}</div><div>ที่อยู่ ${esc(i.payeeAddr)}</div><div>เลขประจำตัวผู้เสียภาษีอากร <span class="mono">${tin(i.payeeTin)}</span></div></div>
+    <div class="boxes"><span>ลำดับที่ ……… ในแบบ</span>
+      ${["ind","co"].map(k=>`<span class="tick"><i>${i.payee===k?"✓":""}</i>${FORM[k]}</span>`).join("")}
+    </div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>ประเภทเงินได้พึงประเมินที่จ่าย</th><th>วัน เดือน ปีภาษี ที่จ่าย</th><th>จำนวนเงินที่จ่าย</th><th>ภาษีที่หักและนำส่งไว้</th></tr></thead>
+      <tbody>${ROWS.map(([n,th,ja])=>{const x=byRow[n];return `<tr class="${x?"on":""}"><td>${n}. ${th}${x&&n===5?` (${x.names.join(", ")})`:""}<div class="jp-gloss">${ja}</div></td><td>${x?thDate(d):""}</td><td class="num">${x?fmt(x.amt):""}</td><td class="num">${x?fmt(x.wht):""}</td></tr>`}).join("")}
+      <tr><td colspan="2" style="text-align:right">รวมเงินที่จ่ายและภาษีที่หักนำส่ง</td><td class="num">${fmt(certBase)}</td><td class="num">${fmt(r.wht)}</td></tr></tbody>
+    </table></div>
+    <div class="words">รวมเงินภาษีที่หักนำส่ง (ตัวอักษร)　<b>${bahtText(r.wht)}</b><div class="jp-gloss">源泉税額（タイ文字表記）</div></div>
+    <div class="boxes"><span>ผู้จ่ายเงิน</span><span class="tick"><i>✓</i>(1) หัก ณ ที่จ่าย</span><span class="tick"><i></i>(2) ออกให้ตลอดไป</span><span class="tick"><i></i>(3) ออกให้ครั้งเดียว</span></div>
+    <div style="text-align:right">ลงชื่อ ................................ ผู้จ่ายเงิน　วันที่ ${thDate(d)}</div>
+    
+  </div>`;
+}
+
+
+// ---- official 50 ทวิ PDF (filled in the browser) ----
+const R = { // field rectangles on the Revenue Department form [x0,y0,x1,y1] in pt
+  id1:[375,744,558,759], name1:[54,729,316,745], add1:[61,706,550,722],
+  id1_2:[375,677,558,691], name2:[53,658,314,671], add2:[59,627,550,643],
+  chk_ind:[471,602,484,615], chk_co:[395,584,407,597], chk8:[82,119,94,131],
+  tot_pay:[409,180,488,196], tot_tax:[496,180,560,196], words:[185,158,558,177],
+  day:[342,72,366,87], month:[364,71,428,87], year:[429,72,470,87],
+};
+const ROWR = { 2:[[328,519,403,533],[410,520,489,534],[496,519,560,532]],
+  3:[[328,504,403,518],[411,504,490,517],[496,504,560,517]],
+  4:[[328,490,403,505],[412,490,491,504],[496,490,560,503]],
+  5:[[327,216,403,230],[409,216,489,230],[496,215,561,230]] };
+const UL = { // underline the income type wording printed on the form: [x0, x1, top-down y of text bottom]
+  service:[[175.3,207.8,631.3]], rent:[[119.0,139.1,631.3]], hire:[[298.9,319.8,616.8],[52.8,76.6,631.3]],
+  ad:[[80.0,115.9,631.3]], transport:[[142.3,172.1,631.3]], insurance:[[211.1,287.5,631.3]],
+  performer:[[189.5,295.7,616.8]], promo:[[94.7,299.0,602.3]], prize:[[301.9,322.2,602.3],[52.8,186.2,616.8]],
+  commission:[[52.8,140.9,326.8]], royalty:[[52.8,103.0,341.3]], interest:[[67.1,95.3,355.8]] };
+const PAY_DIV=475.5, TAX_DIV=546.5;
+const TH_MONTHS=["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
+let templateBytes=null, current=null;
+
+async function thaiPng(text, wPt, sizePt, align){ // browser shapes Thai correctly; embed as image
+  const S=4, c=document.createElement("canvas"); c.width=Math.ceil(wPt*S); c.height=16*S;
+  const g=c.getContext("2d"); let sz=sizePt*S;
+  const setF=()=>g.font=`${sz}px Sarabun, Loma, Tahoma, sans-serif`; setF();
+  while(g.measureText(text).width>c.width-4 && sz>6*S){ sz-=S/2; setF(); }
+  g.fillStyle="#000"; g.textBaseline="alphabetic";
+  const w=g.measureText(text).width, x= align==="center" ? (c.width-w)/2 : 0;
+  g.fillText(text, x, 12*S);
+  const blob=await new Promise(r=>c.toBlob(r,"image/png")); return new Uint8Array(await blob.arrayBuffer());
+}
+async function buildPdf(i, r){
+  if(!templateBytes) templateBytes=new Uint8Array(await (await fetch("50tawi.pdf")).arrayBuffer());
+  try{ await document.fonts.load("12px Sarabun"); }catch(e){}
+  const {PDFDocument, StandardFonts, rgb}=PDFLib;
+  const doc=await PDFDocument.load(templateBytes.slice(0)); const pg=doc.getPages()[0];
+  // remove the form layer (empty fields + "Clear Data" button); text is drawn onto the page instead
+  pg.node.delete(PDFLib.PDFName.of("Annots")); doc.catalog.delete(PDFLib.PDFName.of("AcroForm"));
+  const helv=await doc.embedFont(StandardFonts.Helvetica);
+  const txt=(s,x,y,size=9.5)=>pg.drawText(s,{x,y,size,font:helv,color:rgb(0,0,0)});
+  const thai=async(s,[x0,y0,x1],size=11.5,align)=>{ if(!s) return; const img=await doc.embedPng(await thaiPng(s,x1-x0-3,size,align)); pg.drawImage(img,{x:x0+2,y:y0-0.5,width:x1-x0-3,height:16}); };
+  const comb=(v,[x0,y0,x1])=>{ const d=v.replace(/\D/g,""); if(d.length!==13) return; const t=`${d[0]} ${d.slice(1,5)} ${d.slice(5,10)} ${d.slice(10,12)} ${d[12]}`, cw=(x1-x0)/17;
+    [...t].forEach((ch,k)=>{ if(ch!==" ") txt(ch, x0+k*cw+cw/2-helv.widthOfTextAtSize(ch,9.5)/2, y0+3.5); }); };
+  const money=(v,[x0,y0,x1],div)=>{ const [b,s]=fmt(v).split("."); txt(b, div-2-helv.widthOfTextAtSize(b,9.5), y0+3.5); txt(s, (div+x1)/2-helv.widthOfTextAtSize(s,9.5)/2, y0+3.5); };
+  const tick=([x0,y0,x1,y1])=>{ const h=y1-y0, o={thickness:1.4,color:rgb(0,0,0)};
+    pg.drawLine({start:{x:x0+2.5,y:y1-h*.55},end:{x:x0+(x1-x0)*.42,y:y0+2.5},...o}); pg.drawLine({start:{x:x0+(x1-x0)*.42,y:y0+2.5},end:{x:x1-2,y:y1-2},...o}); };
+
+  comb(i.payerTin,R.id1); await thai(i.payerName,R.name1); await thai(i.payerAddr,R.add1);
+  comb(i.payeeTin,R.id1_2); await thai(i.payeeName,R.name2); await thai(i.payeeAddr,R.add2);
+  tick(i.payee==="ind"?R.chk_ind:R.chk_co); tick(R.chk8);
+  const d=new Date(i.date+"T00:00:00"), byRow={};
+  r.lines.filter(l=>l.wht>0).forEach(l=>{const k=l.t.row; byRow[k]=byRow[k]||{amt:0,wht:0}; byRow[k].amt+=l.amt; byRow[k].wht+=l.wht;});
+  let base=0;
+  for(const [k,x] of Object.entries(byRow)){ const [dr,pr,tr]=ROWR[k]; await thai(thDate(d),dr,11); money(x.amt,pr,PAY_DIV); money(r2(x.wht),tr,TAX_DIV); base+=x.amt; }
+  for(const k of new Set(r.lines.filter(l=>l.wht>0).map(l=>l.type))) for(const [x0,x1,yb] of (UL[k]||[]))
+    pg.drawLine({start:{x:x0,y:842-yb+1.4},end:{x:x1,y:842-yb+1.4},thickness:0.8,color:rgb(0,0,0)});
+  money(base,R.tot_pay,PAY_DIV); money(r.wht,R.tot_tax,TAX_DIV);
+  await thai(bahtText(r.wht),R.words,12.5,"center");
+  txt(String(d.getDate()),R.day[0]+6,R.day[1]+3.5,10); await thai(TH_MONTHS[d.getMonth()],R.month,11,"center"); txt(String(d.getFullYear()+543),R.year[0]+8,R.year[1]+3.5,10);
+  return await doc.save();
+}
+(()=>{
+  if(!window.PDFLib) return;
+  $("dlbar").hidden=false;
+  $("dlBtn").addEventListener("click",async()=>{
+    if(!current) return; const btn=$("dlBtn"); btn.disabled=true; $("dlMsg").textContent="PDFを作成中… กำลังสร้างไฟล์";
+    try{
+      const bytes=await buildPdf(current.i,current.r);
+      const url=URL.createObjectURL(new Blob([bytes],{type:"application/pdf"}));
+      const a=document.createElement("a"); a.href=url; a.download=`50tawi_${current.i.date}.pdf`;
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),10000);
+      $("dlMsg").textContent="ダウンロードしました。署名・押印してから受領者に渡してください。 ลงนามและประทับตราก่อนส่งมอบ";
+    }catch(e){ console.error(e); $("dlMsg").textContent="PDFを作成できませんでした。もう一度お試しください。 สร้างไฟล์ไม่สำเร็จ"; }
+    finally{ btn.disabled=!current; }
+  });
+})();
+
+$("f").addEventListener("submit",e=>e.preventDefault());
+
+document.querySelectorAll("input[name=payee],#date,#recur,#ewht,#payeeName,#payeeTin,#payerName,#payerTin,#payerAddr,#payeeAddr").forEach(el=>el.addEventListener("input",render));
+// ---- payer info: locked until 編集 is pressed; saved in this browser ----
+const PAYER=["payerName","payerTin","payerAddr"];
+try{ const saved=JSON.parse(localStorage.getItem("payer")||"null"); if(saved) PAYER.forEach(id=>{ if(saved[id]!=null) $(id).value=saved[id]; }); }catch(e){}
+$("editPayer").addEventListener("click",()=>{
+  const box=$("editPayer").closest(".party"), editing=!box.classList.contains("editing");
+  box.classList.toggle("editing",editing);
+  PAYER.forEach(id=>$(id).readOnly=!editing);
+  $("editPayer").innerHTML = editing ? '保存 <span style="font-family:var(--f-th)">บันทึก</span>' : '編集 <span style="font-family:var(--f-th)">แก้ไข</span>';
+  $("lockMsg").innerHTML = editing ? '編集中 <span class="th2">กำลังแก้ไข</span>' : '保存しました <span class="th2">บันทึกแล้ว</span>';
+  if(editing){ $("payerName").focus(); }
+  else { try{ localStorage.setItem("payer",JSON.stringify(Object.fromEntries(PAYER.map(id=>[id,$(id).value])))); }catch(e){} render(); }
+});
+renderItems(); render();
+</script>
+
+</body>
+</html>

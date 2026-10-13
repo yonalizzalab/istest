@@ -138,7 +138,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
         <legend>源泉徴収義務者（支払者） <span class="th2">ผู้มีหน้าที่หักภาษี ณ ที่จ่าย</span></legend>
         <div class="lockbar"><span id="lockMsg">登録済みの情報を使用中 <span class="th2">ใช้ข้อมูลที่บันทึกไว้</span></span><button type="button" class="ghost small" id="editPayer">編集 <span style="font-family:var(--f-th)">แก้ไข</span></button></div>
         <div class="pair">
-        <label for="payerName">会社名 <span class="th">ชื่อผู้จ่ายเงิน</span><input id="payerName" readonly value="บริษัท ซากุระ เทรดดิ้ง (ประเทศไทย) จำกัด"></label>
+        <label for="payerName">会社名 <span class="th">ชื่อผู้จ่ายเงิน</span><input id="payerName" readonly value="บริษัท โยษิตาเทส จำกัด"></label>
         <label for="payerTin">納税者番号（13桁） <span class="th">เลขประจำตัวผู้เสียภาษี</span><input id="payerTin" readonly inputmode="numeric" maxlength="13" value="0105560000000"></label>
         </div>
         <label for="payerAddr">住所 <span class="th">ที่อยู่</span><input id="payerAddr" readonly value="999/9 อาคารสาทรทาวเวอร์ ชั้น 20 ถนนสาทรใต้ แขวงทุ่งมหาเมฆ เขตสาทร กรุงเทพมหานคร 10120"></label>
@@ -153,7 +153,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
         </div>
         <p class="hint">お金を受け取る相手は誰か。これで申告書の種類が決まります：タイの個人 → <span style="font-family:var(--f-th)">ภ.ง.ด.3</span>、タイの法人 → <span style="font-family:var(--f-th)">ภ.ง.ด.53</span>、海外の法人 → <span style="font-family:var(--f-th)">ภ.ง.ด.54</span></p>
         <div class="pair">
-        <label for="payeeName">名称 <span class="th">ชื่อผู้รับเงิน</span><input id="payeeName" value="บริษัท บางนา พร็อพเพอร์ตี้ จำกัด"></label>
+        <label for="payeeName">名称 <span class="th">ชื่อผู้รับเงิน</span><input id="payeeName" value="บริษัท อาจารย์วชิระ จำกัด"></label>
         <label for="payeeTin">納税者番号（13桁） <span class="th">เลขประจำตัวผู้เสียภาษี</span><input id="payeeTin" inputmode="numeric" maxlength="13" value="0105561000000"></label>
         </div>
         <label for="payeeAddr">住所 <span class="th">ที่อยู่</span><input id="payeeAddr" value="88 ถนนบางนา-ตราด แขวงบางนาใต้ เขตบางนา กรุงเทพมหานคร 10260"></label>
@@ -273,7 +273,7 @@ function judge(i){
     notes.push(["warn",`「${l.t.ja.split("（")[0]}」：${why}`]);
   }
   if(lines.some(l=>l.type==="rent" && l.vat)) notes.push(["warn","不動産の賃料は通常VAT非課税です。請求書にVATが記載されているか確認してください（車両・機械のリースはVAT課税）。"]);
-  if(lines.filter(l=>l.rate>0).length>1) notes.push(["","税率の異なる明細は、証明書では同じ欄（第5項）に合算して記載します。月次申告書（PND）では明細ごとに税率を分けて記載します。"]);
+  if(new Set(lines.filter(l=>l.rate>0 && l.t.row===5).map(l=>l.type)).size>1) notes.push(["","種類の異なる明細は、証明書で行を分けて記載します（1つ目は第5項、ほかは第6項「その他」に種類名を記入）。"]);
   if(small) notes.push(["","源泉対象の金額が1,000バーツ未満の単発の支払いのため、原則として源泉徴収は不要です（継続契約の場合は必要）。"]);
   if(eApplied) notes.push(["","e-Withholding Tax利用のため 2%〜5% の税率を1%に軽減しています（2027年12月31日まで）。銀行が申告を代行するため、月次申告と証明書の作成は不要です。"]);
   if(i.payee==="fo"){
@@ -284,6 +284,19 @@ function judge(i){
 }
 
 function jDate(d){return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`}
+// rows on the certificate: rows 2-4 by type; the first row-5 type goes on row 5,
+// any other row-5 types (different rate) go on row 6 "อื่น ๆ (ระบุ)" with their names written in
+function certRows(r){
+  const byRow={}, add=(k,l)=>{ byRow[k]=byRow[k]||{amt:0,wht:0,names:[]}; byRow[k].amt+=l.amt; byRow[k].wht+=l.wht; if(!byRow[k].names.includes(l.t.th)) byRow[k].names.push(l.t.th); };
+  const ls=r.lines.filter(l=>l.wht>0), first5=(ls.find(l=>l.t.row===5)||{}).type, underline=new Set();
+  for(const l of ls){
+    if(l.t.row!==5){ add(l.t.row,l); underline.add(l.type); }
+    else if(l.type===first5){ add(5,l); underline.add(l.type); }
+    else add(6,l);
+  }
+  return {byRow,underline};
+}
+const certDate = d => `${d.getDate()}/${["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."][d.getMonth()]}/${d.getFullYear()+543}`;
 function thDate(d){const M=["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];return `${d.getDate()} ${M[d.getMonth()]} ${d.getFullYear()+543}`}
 const tin = s => (s||"").replace(/\D/g,"").replace(/^(\d)(\d{4})(\d{5})(\d{2})(\d)$/,"$1 $2 $3 $4 $5");
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
@@ -359,7 +372,9 @@ const R = { // field rectangles on the Revenue Department form [x0,y0,x1,y1] in 
 const ROWR = { 2:[[328,519,403,533],[410,520,489,534],[496,519,560,532]],
   3:[[328,504,403,518],[411,504,490,517],[496,504,560,517]],
   4:[[328,490,403,505],[412,490,491,504],[496,490,560,503]],
-  5:[[327,216,403,230],[409,216,489,230],[496,215,561,230]] };
+  5:[[327,216,403,230],[409,216,489,230],[496,215,561,230]],
+  6:[[327,199,403,213],[409,199,489,213],[496,197,561,212]] };
+const SPEC6=[96,197,325,214]; // "6. อื่น ๆ (ระบุ)" text field
 const UL = { // underline the income type wording printed on the form: [x0, x1, top-down y of text bottom]
   service:[[175.3,207.8,631.3]], rent:[[119.0,139.1,631.3]], hire:[[298.9,319.8,616.8],[52.8,76.6,631.3]],
   ad:[[80.0,115.9,631.3]], transport:[[142.3,172.1,631.3]], insurance:[[211.1,287.5,631.3]],
@@ -398,11 +413,11 @@ async function buildPdf(i, r){
   comb(i.payerTin,R.id1); await thai(i.payerName,R.name1); await thai(i.payerAddr,R.add1);
   comb(i.payeeTin,R.id1_2); await thai(i.payeeName,R.name2); await thai(i.payeeAddr,R.add2);
   tick(i.payee==="ind"?R.chk_ind:R.chk_co); tick(R.chk8);
-  const d=new Date(i.date+"T00:00:00"), byRow={};
-  r.lines.filter(l=>l.wht>0).forEach(l=>{const k=l.t.row; byRow[k]=byRow[k]||{amt:0,wht:0}; byRow[k].amt+=l.amt; byRow[k].wht+=l.wht;});
+  const d=new Date(i.date+"T00:00:00"), {byRow,underline}=certRows(r);
   let base=0;
-  for(const [k,x] of Object.entries(byRow)){ const [dr,pr,tr]=ROWR[k]; await thai(thDate(d),dr,11); money(x.amt,pr,PAY_DIV); money(r2(x.wht),tr,TAX_DIV); base+=x.amt; }
-  for(const k of new Set(r.lines.filter(l=>l.wht>0).map(l=>l.type))) for(const [x0,x1,yb] of (UL[k]||[]))
+  for(const [k,x] of Object.entries(byRow)){ const [dr,pr,tr]=ROWR[k]; await thai(certDate(d),dr,11); money(x.amt,pr,PAY_DIV); money(r2(x.wht),tr,TAX_DIV); base+=x.amt; }
+  if(byRow[6]) await thai(byRow[6].names.join(", "),SPEC6,11);
+  for(const k of underline) for(const [x0,x1,yb] of (UL[k]||[]))
     pg.drawLine({start:{x:x0,y:842-yb+1.4},end:{x:x1,y:842-yb+1.4},thickness:0.8,color:rgb(0,0,0)});
   money(base,R.tot_pay,PAY_DIV); money(r.wht,R.tot_tax,TAX_DIV);
   await thai(bahtText(r.wht),R.words,12.5,"center");

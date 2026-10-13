@@ -14,25 +14,21 @@
 body{margin:0}
 /* Layout: two-pane working tool — input on the left, result + Thai certificate preview on the right */
 :root{
-  --bg:#eceff3; --surface:#ffffff; --ink:#1b2130; --muted:#5a6375; --line:#d3d9e2;
-  --accent:#2c4a8c; --accent-soft:#e3e9f6; --warn:#9a5b00; --warn-soft:#fbf0dc; --ok:#1f6b4a;
+  --bg:#ffffff; --surface:#ffffff; --soft:#f5f7fa; --ink:#1b2130; --muted:#5a6375; --line:#dde2ea;
+  --accent:#2c4a8c; --accent-soft:#eaf0fa; --warn:#8a5200; --warn-soft:#fdf3e1; --ok:#1f6b4a;
   --f-jp:"Noto Sans JP","Hiragino Sans","Yu Gothic",sans-serif;
   --f-th:"Noto Sans Thai","Leelawadee UI",Tahoma,sans-serif;
   --f-num:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:light;
 }
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#12161f; --surface:#1a202c; --ink:#e6e9ef; --muted:#9aa3b5; --line:#2e3646;
-  --accent:#8fa9e8; --accent-soft:#232d44; --warn:#e9b25a; --warn-soft:#3a2d16; --ok:#6fcf9f; color-scheme:dark}}
-:root[data-theme="dark"]{
-  --bg:#12161f; --surface:#1a202c; --ink:#e6e9ef; --muted:#9aa3b5; --line:#2e3646;
-  --accent:#8fa9e8; --accent-soft:#232d44; --warn:#e9b25a; --warn-soft:#3a2d16; --ok:#6fcf9f; color-scheme:dark}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-jp);font-size:15px;line-height:1.6}
-.wrap{max-width:1180px;margin:0 auto;padding:28px 16px 48px;display:grid;gap:24px}
+.wrap{max-width:860px;margin:0 auto;padding:28px 16px 48px;display:grid;gap:24px}
 header h1{font-size:1.6rem;margin:0;text-wrap:balance;letter-spacing:.02em}
 header p{margin:4px 0 0;color:var(--muted);max-width:68ch}
 .badge{display:inline-block;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);padding:2px 8px;border-radius:3px;margin-bottom:8px}
-.grid{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:24px;align-items:start}
-@media (max-width:860px){.grid{grid-template-columns:1fr}}
+.grid{display:grid;gap:24px}
+.pair{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:12px}
+@media (max-width:640px){.pair{grid-template-columns:1fr}}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:20px;display:grid;gap:16px;min-width:0}
 .panel h2{font-size:1rem;margin:0;display:flex;gap:8px;align-items:baseline}
 .panel h2 small{font-weight:400;color:var(--muted);font-family:var(--f-th);font-size:.82rem}
@@ -91,7 +87,7 @@ button{font:inherit;font-size:.9rem;padding:9px 16px;border-radius:4px;border:1p
 button.ghost{background:transparent;color:var(--accent)}
 .del{border:0;background:transparent;color:var(--muted);padding:2px 6px;font-size:1rem}
 .items{display:grid;gap:8px}
-.item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 8px;padding:10px;border:1px solid var(--line);border-radius:4px;background:var(--bg)}
+.item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 8px;padding:10px;border:1px solid var(--line);border-radius:4px;background:var(--soft)}
 .item select{grid-column:1/-1}
 .item .amt-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;grid-column:1/-1}
 .item .vatchk{display:flex;gap:4px;align-items:center;font-size:.8rem;font-weight:400;white-space:nowrap}
@@ -109,11 +105,15 @@ button.add{justify-self:start;padding:6px 12px;font-size:.85rem}
 .party legend{padding:0 6px;font-weight:700;display:flex;flex-wrap:wrap;gap:0 6px;align-items:baseline}
 .lockbar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;font-size:.8rem;color:var(--muted)}
 button.small{padding:4px 12px;font-size:.82rem}
-input[readonly]{background:var(--bg);border-color:transparent;color:var(--ink);cursor:default}
+input[readonly]{background:var(--soft);border-color:transparent;color:var(--ink);cursor:default}
 .party.editing{border-color:var(--accent)}
 .segth{font-family:var(--f-th);font-size:.72rem;opacity:.85}
-.dlbar{display:grid;gap:6px}
-.dlbar button{justify-self:start}
+.dl{display:grid;gap:10px;text-align:center}
+#dlBtn{width:100%;padding:18px 20px;font-size:1.15rem;font-weight:700;border-radius:8px;display:grid;gap:2px;justify-items:center}
+#dlBtn .sub{font-family:var(--f-th);font-weight:500;font-size:.92rem;opacity:.9}
+#dlBtn:not(:disabled):hover{filter:brightness(1.1)}
+.dl .hint{text-align:center}
+#dlReason{color:var(--warn);font-size:.9rem}
 button:disabled{opacity:.45;cursor:not-allowed}
 .party legend .th2{white-space:nowrap}
 .th2{font-family:var(--f-th);color:var(--muted);font-weight:400;font-size:.78rem}
@@ -127,7 +127,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
   <header>
     <span class="badge">IS 試作 · Beta</span>
     <h1>源泉税アシスタント <span style="font-family:var(--f-th);font-weight:500;font-size:1rem;color:var(--muted)">ระบบช่วยออกหนังสือรับรองการหักภาษี ณ ที่จ่าย</span></h1>
-    <p>請求書の明細を日本語で入力すると、明細ごとに源泉税率を判定し、申告様式・期限とあわせてタイ語の源泉徴収証明書（50 ทวิ）の下書きを作成します。</p>
+    <p>請求書の明細を日本語で入力すると、明細ごとに源泉税率を判定し、申告様式・期限とあわせて、歳入局の公式様式で源泉徴収証明書（50 ทวิ）をPDFで作成します。</p>
   </header>
 
   <div class="grid">
@@ -137,8 +137,10 @@ button:disabled{opacity:.45;cursor:not-allowed}
       <fieldset class="party">
         <legend>源泉徴収義務者（支払者） <span class="th2">ผู้มีหน้าที่หักภาษี ณ ที่จ่าย</span></legend>
         <div class="lockbar"><span id="lockMsg">登録済みの情報を使用中 <span class="th2">ใช้ข้อมูลที่บันทึกไว้</span></span><button type="button" class="ghost small" id="editPayer">編集 <span style="font-family:var(--f-th)">แก้ไข</span></button></div>
+        <div class="pair">
         <label for="payerName">会社名 <span class="th">ชื่อผู้จ่ายเงิน</span><input id="payerName" readonly value="บริษัท ซากุระ เทรดดิ้ง (ประเทศไทย) จำกัด"></label>
         <label for="payerTin">納税者番号（13桁） <span class="th">เลขประจำตัวผู้เสียภาษี</span><input id="payerTin" readonly inputmode="numeric" maxlength="13" value="0105560000000"></label>
+        </div>
         <label for="payerAddr">住所 <span class="th">ที่อยู่</span><input id="payerAddr" readonly value="999/9 อาคารสาทรทาวเวอร์ ชั้น 20 ถนนสาทรใต้ แขวงทุ่งมหาเมฆ เขตสาทร กรุงเทพมหานคร 10120"></label>
       </fieldset>
 
@@ -150,8 +152,10 @@ button:disabled{opacity:.45;cursor:not-allowed}
           <input type="radio" name="payee" id="p-fo" value="fo"><label for="p-fo">海外の法人<br><span class="segth">นิติบุคคลต่างประเทศ</span></label>
         </div>
         <p class="hint">お金を受け取る相手は誰か。これで申告書の種類が決まります：タイの個人 → <span style="font-family:var(--f-th)">ภ.ง.ด.3</span>、タイの法人 → <span style="font-family:var(--f-th)">ภ.ง.ด.53</span>、海外の法人 → <span style="font-family:var(--f-th)">ภ.ง.ด.54</span></p>
+        <div class="pair">
         <label for="payeeName">名称 <span class="th">ชื่อผู้รับเงิน</span><input id="payeeName" value="บริษัท บางนา พร็อพเพอร์ตี้ จำกัด"></label>
         <label for="payeeTin">納税者番号（13桁） <span class="th">เลขประจำตัวผู้เสียภาษี</span><input id="payeeTin" inputmode="numeric" maxlength="13" value="0105561000000"></label>
+        </div>
         <label for="payeeAddr">住所 <span class="th">ที่อยู่</span><input id="payeeAddr" value="88 ถนนบางนา-ตราด แขวงบางนาใต้ เขตบางนา กรุงเทพมหานคร 10260"></label>
       </fieldset>
 
@@ -173,26 +177,20 @@ button:disabled{opacity:.45;cursor:not-allowed}
 
     </form>
 
-    <div style="display:grid;gap:24px;min-width:0">
-      <section class="panel" aria-live="polite">
-        <h2>判定結果 <small>ผลการคำนวณ</small></h2>
-        <dl class="summary" id="sum"></dl>
-        <div class="tbl-wrap brk" id="brk"></div>
-        <div class="explain" id="explain"></div>
-        <div class="notes" id="notes"></div>
-      </section>
+    <section class="panel" aria-live="polite">
+      <h2>計算結果 <small>ผลการคำนวณ</small></h2>
+      <dl class="summary" id="sum"></dl>
+      <div class="tbl-wrap brk" id="brk"></div>
+      <div class="explain" id="explain"></div>
+      <div class="notes" id="notes"></div>
+    </section>
 
-      <section class="panel">
-        <h2>源泉徴収証明書の下書き <small>หนังสือรับรองการหักภาษี ณ ที่จ่าย (50 ทวิ)</small></h2>
-        <div class="dlbar" id="dlbar" hidden>
-          <button type="button" id="dlBtn">PDFをダウンロード <span style="font-family:var(--f-th)">ดาวน์โหลด PDF (แบบกรมสรรพากร)</span></button>
-          <span class="hint" id="dlMsg">歳入局の公式様式に記入したPDFを作成します。入力内容はこのブラウザ内だけで処理され、外部に送信されません。</span>
-        </div>
-        <div id="cert"></div>
-      </section>
-    </div>
+    <section class="dl" id="dlbar">
+      <button type="button" id="dlBtn">源泉徴収証明書をダウンロード（PDF）<span class="sub">ดาวน์โหลดหนังสือรับรองการหักภาษี ณ ที่จ่าย (50 ทวิ)</span></button>
+      <div id="dlReason" hidden></div>
+      <span class="hint" id="dlMsg">歳入局の公式様式（50 ทวิ）に記入したPDFを作成します。入力内容はこのブラウザ内だけで処理され、外部に送信されません。</span>
+    </section>
   </div>
-
 
   <p class="foot">税率は2026年10月時点の一般的なルールに基づく試作です（e-Withholding Tax 1%軽減は2026年1月1日〜2027年12月31日）。海外送金・租税条約の適用、祝日による期限の変更などは対象外または簡略化しています。実際の申告前に必ず会計担当者・税理士に確認してください。表示中の会社名・番号はすべて架空の例です。</p>
 </div>
@@ -340,41 +338,13 @@ function render(){
   const form = r.eApplied ? "e-Withholding Tax（銀行経由）" : FORM_JA[i.payee];
   $("explain").innerHTML = noFiling ? "" : `<p>申告様式：<b>${form}</b>　/　提出期限：<b>${jDate(r.due)}</b>（紙）・<b>${jDate(r.edue)}</b>（電子申告）</p>`;
 
-  // certificate
+  // download state (no on-page preview)
   current = (r.wht>0 && !r.eApplied && i.payee!=="fo" && !r.unsupported) ? {i,r} : null;
-  if($("dlBtn")) $("dlBtn").disabled=!current;
-  if(r.wht===0 || r.eApplied){
-    $("cert").innerHTML=`<div class="na">${r.eApplied?"e-Withholding Taxでは銀行が電子的に証明を行うため、紙の証明書は不要です。":"源泉徴収が発生しないため、証明書は作成しません。"}</div>`; return;
-  }
-  if(i.payee==="fo"){
-    $("cert").innerHTML=`<div class="na">海外法人への支払い（PND.54）は 50 ทวิ ではなく、PND.54 の控えと納付書を送付先に渡すのが一般的です。日本で外国税額控除を受けるための書類は会計担当者に確認してください。</div>`; return;
-  }
-  const d=new Date(i.date+"T00:00:00");
-  const byRow={}; r.lines.filter(l=>l.wht>0).forEach(l=>{const k=l.t.row; byRow[k]=byRow[k]||{amt:0,wht:0,names:[]}; byRow[k].amt+=l.amt; byRow[k].wht+=l.wht; if(!byRow[k].names.includes(l.t.th)) byRow[k].names.push(l.t.th);});
-  const certBase = Object.values(byRow).reduce((s,x)=>s+x.amt,0);
-  $("cert").innerHTML=`
-  <div class="cert">
-    <div class="cert-head">
-      <div><strong>หนังสือรับรองการหักภาษี ณ ที่จ่าย</strong><div>ตามมาตรา 50 ทวิ แห่งประมวลรัษฎากร</div><div class="jp-gloss">源泉徴収証明書（歳入法第50条の2）</div></div>
-      <div>เล่มที่ ……… เลขที่ ………</div>
-    </div>
-    <div class="cert-box"><span class="lbl">ผู้มีหน้าที่หักภาษี ณ ที่จ่าย <span class="jp-gloss">支払者</span></span>
-      <div>${esc(i.payerName)}</div><div>ที่อยู่ ${esc(i.payerAddr)}</div><div>เลขประจำตัวผู้เสียภาษีอากร <span class="mono">${tin(i.payerTin)}</span></div></div>
-    <div class="cert-box"><span class="lbl">ผู้ถูกหักภาษี ณ ที่จ่าย <span class="jp-gloss">支払先</span></span>
-      <div>${esc(i.payeeName)}</div><div>ที่อยู่ ${esc(i.payeeAddr)}</div><div>เลขประจำตัวผู้เสียภาษีอากร <span class="mono">${tin(i.payeeTin)}</span></div></div>
-    <div class="boxes"><span>ลำดับที่ ……… ในแบบ</span>
-      ${["ind","co"].map(k=>`<span class="tick"><i>${i.payee===k?"✓":""}</i>${FORM[k]}</span>`).join("")}
-    </div>
-    <div class="tbl-wrap"><table>
-      <thead><tr><th>ประเภทเงินได้พึงประเมินที่จ่าย</th><th>วัน เดือน ปีภาษี ที่จ่าย</th><th>จำนวนเงินที่จ่าย</th><th>ภาษีที่หักและนำส่งไว้</th></tr></thead>
-      <tbody>${ROWS.map(([n,th,ja])=>{const x=byRow[n];return `<tr class="${x?"on":""}"><td>${n}. ${th}${x&&n===5?` (${x.names.join(", ")})`:""}<div class="jp-gloss">${ja}</div></td><td>${x?thDate(d):""}</td><td class="num">${x?fmt(x.amt):""}</td><td class="num">${x?fmt(x.wht):""}</td></tr>`}).join("")}
-      <tr><td colspan="2" style="text-align:right">รวมเงินที่จ่ายและภาษีที่หักนำส่ง</td><td class="num">${fmt(certBase)}</td><td class="num">${fmt(r.wht)}</td></tr></tbody>
-    </table></div>
-    <div class="words">รวมเงินภาษีที่หักนำส่ง (ตัวอักษร)　<b>${bahtText(r.wht)}</b><div class="jp-gloss">源泉税額（タイ文字表記）</div></div>
-    <div class="boxes"><span>ผู้จ่ายเงิน</span><span class="tick"><i>✓</i>(1) หัก ณ ที่จ่าย</span><span class="tick"><i></i>(2) ออกให้ตลอดไป</span><span class="tick"><i></i>(3) ออกให้ครั้งเดียว</span></div>
-    <div style="text-align:right">ลงชื่อ ................................ ผู้จ่ายเงิน　วันที่ ${thDate(d)}</div>
-    
-  </div>`;
+  const why = current ? "" : r.unsupported ? "対応していない明細があるため作成できません。"
+    : r.eApplied ? "e-Withholding Taxでは銀行が電子的に証明を行うため、証明書は不要です。"
+    : i.payee==="fo" ? "海外法人への支払い（PND.54）は 50 ทวิ の対象外です。PND.54 の控えと納付書を相手先に渡してください。"
+    : "源泉徴収が発生しないため、証明書は不要です。";
+  $("dlBtn").disabled=!current; $("dlReason").hidden=!why; $("dlReason").textContent=why;
 }
 
 
@@ -440,8 +410,7 @@ async function buildPdf(i, r){
   return await doc.save();
 }
 (()=>{
-  if(!window.PDFLib) return;
-  $("dlbar").hidden=false;
+  if(!window.PDFLib){ $("dlBtn").disabled=true; $("dlMsg").textContent="PDF機能を読み込めませんでした。ページを再読み込みしてください。"; return; }
   $("dlBtn").addEventListener("click",async()=>{
     if(!current) return; const btn=$("dlBtn"); btn.disabled=true; $("dlMsg").textContent="PDFを作成中… กำลังสร้างไฟล์";
     try{
